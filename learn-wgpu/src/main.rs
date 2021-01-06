@@ -40,9 +40,8 @@ impl Vertex {
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct Uniforms {
-    // We can't use cgmath with bytemuck directly so we'll have
-    // to convert the Matrix4 into a 4x4 f32 array
     view_proj: [[f32; 4]; 4],
+    model_view: [[f32; 4]; 4],
 }
 
 impl Uniforms {
@@ -50,11 +49,16 @@ impl Uniforms {
         use cgmath::SquareMatrix;
         Self {
             view_proj: cgmath::Matrix4::identity().into(),
+            model_view: cgmath::Matrix4::identity().into(),
         }
     }
 
     fn update_view_proj(&mut self, camera: &camera::Camera) {
         self.view_proj = camera.build_view_projection_matrix().into();
+    }
+
+    fn rotate_model_view(&mut self, theta: f32) {
+        self.model_view = cgmath::Matrix4::from_angle_y(cgmath::Deg(theta)).into();
     }
 }
 
@@ -102,6 +106,7 @@ struct State {
     uniforms: Uniforms,
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
+    rotation: f32,
 }
 
 impl State {
@@ -299,11 +304,11 @@ impl State {
             uniforms,
             uniform_buffer,
             uniform_bind_group,
+            rotation: 0.0,
         }
     }
 
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
-        println!("{:?}", new_size);
         self.size = new_size;
         self.sc_desc.width = new_size.width;
         self.sc_desc.height = new_size.height;
@@ -342,11 +347,13 @@ impl State {
     fn update(&mut self) {
         self.camera_controller.update_camera(&mut self.camera);
         self.uniforms.update_view_proj(&self.camera);
+        self.uniforms.rotate_model_view(self.rotation);
         self.queue.write_buffer(
             &self.uniform_buffer,
             0,
             bytemuck::cast_slice(&[self.uniforms]),
         );
+        self.rotation = (self.rotation + 1.0) % 360.0;
     }
 
     fn render(&mut self) -> Result<(), wgpu::SwapChainError> {
