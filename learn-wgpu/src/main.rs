@@ -36,18 +36,57 @@ impl Vertex {
 
 const VERTICES: &[Vertex] = &[
     Vertex {
-        position: [0.0, 0.5, 0.0],
-        color: [1.0, 0.0, 0.0],
-    },
+        position: [-0.0868241, 0.49240386, 0.0],
+        color: [0.5, 0.0, 0.5],
+    }, // 0
     Vertex {
-        position: [-0.5, -0.5, 0.0],
-        color: [0.0, 1.0, 0.0],
-    },
+        position: [-0.49513406, 0.06958647, 0.0],
+        color: [0.5, 0.0, 0.5],
+    }, // 1
     Vertex {
-        position: [0.5, -0.5, 0.0],
-        color: [0.0, 0.0, 1.0],
-    },
+        position: [-0.21918549, -0.44939706, 0.0],
+        color: [0.5, 0.0, 0.5],
+    }, // 2
+    Vertex {
+        position: [0.35966998, -0.3473291, 0.0],
+        color: [0.5, 0.0, 0.5],
+    }, // 3
+    Vertex {
+        position: [0.44147372, 0.2347359, 0.0],
+        color: [0.5, 0.0, 0.5],
+    }, // 4
 ];
+
+const INDICES: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
+
+const ALT_VERTICES: &[Vertex] = &[
+    Vertex {
+        position: [-0.1, 0.5, 0.0],
+        color: [1.0, 0.0, 0.0],
+    }, // 0
+    Vertex {
+        position: [-0.5, 0.07, 0.0],
+        color: [0.0, 1.0, 0.0],
+    }, // 1
+    Vertex {
+        position: [-0.2, -0.45, 0.0],
+        color: [0.0, 0.0, 1.0],
+    }, // 2
+    Vertex {
+        position: [0.36, -0.35, 0.0],
+        color: [1.0, 0.0, 0.0],
+    }, // 3
+    Vertex {
+        position: [0.44, 0.23, 0.0],
+        color: [0.0, 1.0, 0.0],
+    }, // 4
+    Vertex {
+        position: [0.0, 1.0, 0.0],
+        color: [0.0, 0.0, 1.0],
+    }, // 5
+];
+
+const ALT_INDICES: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 4, 5];
 
 struct State {
     surface: wgpu::Surface,
@@ -59,7 +98,12 @@ struct State {
     clear_color: wgpu::Color,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
-    num_vertices: u32,
+    index_buffer: wgpu::Buffer,
+    num_indices: u32,
+    alt_vertex_buffer: wgpu::Buffer,
+    alt_index_buffer: wgpu::Buffer,
+    alt_num_indices: u32,
+    use_alt_polygon: bool,
 }
 
 impl State {
@@ -151,7 +195,24 @@ impl State {
             contents: bytemuck::cast_slice(VERTICES),
             usage: wgpu::BufferUsage::VERTEX,
         });
-        let num_vertices = VERTICES.len() as u32;
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(INDICES),
+            usage: wgpu::BufferUsage::INDEX,
+        });
+        let num_indices = INDICES.len() as u32;
+
+        let alt_vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Alternate Vertex Buffer"),
+            contents: bytemuck::cast_slice(ALT_VERTICES),
+            usage: wgpu::BufferUsage::VERTEX,
+        });
+        let alt_index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Alternate Index Buffer"),
+            contents: bytemuck::cast_slice(ALT_INDICES),
+            usage: wgpu::BufferUsage::INDEX,
+        });
+        let alt_num_indices = ALT_INDICES.len() as u32;
 
         Self {
             surface,
@@ -163,7 +224,12 @@ impl State {
             clear_color,
             render_pipeline,
             vertex_buffer,
-            num_vertices,
+            index_buffer,
+            num_indices,
+            alt_vertex_buffer,
+            alt_index_buffer,
+            alt_num_indices,
+            use_alt_polygon: false,
         }
     }
 
@@ -189,6 +255,14 @@ impl State {
                 true
             }
             WindowEvent::KeyboardInput { input, .. } => match input {
+                KeyboardInput {
+                    state: ElementState::Pressed,
+                    virtual_keycode: Some(VirtualKeyCode::Space),
+                    ..
+                } => {
+                    self.use_alt_polygon = !self.use_alt_polygon;
+                    true
+                }
                 _ => false,
             },
             _ => false,
@@ -219,8 +293,15 @@ impl State {
                 depth_stencil_attachment: None,
             });
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.draw(0..self.num_vertices, 0..1);
+            if self.use_alt_polygon {
+                render_pass.set_vertex_buffer(0, self.alt_vertex_buffer.slice(..));
+                render_pass.set_index_buffer(self.alt_index_buffer.slice(..));
+                render_pass.draw_indexed(0..self.alt_num_indices, 0, 0..1);
+            } else {
+                render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+                render_pass.set_index_buffer(self.index_buffer.slice(..));
+                render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+            }
         }
         self.queue.submit(std::iter::once(encoder.finish()));
 
