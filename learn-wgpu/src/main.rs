@@ -1,9 +1,53 @@
 use futures::executor::block_on;
+use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::{Window, WindowBuilder},
 };
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct Vertex {
+    position: [f32; 3],
+    color: [f32; 3],
+}
+
+impl Vertex {
+    fn desc<'a>() -> wgpu::VertexBufferDescriptor<'a> {
+        wgpu::VertexBufferDescriptor {
+            stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::InputStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttributeDescriptor {
+                    offset: 0,
+                    shader_location: 0,
+                    format: wgpu::VertexFormat::Float3,
+                },
+                wgpu::VertexAttributeDescriptor {
+                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    shader_location: 1,
+                    format: wgpu::VertexFormat::Float3,
+                },
+            ],
+        }
+    }
+}
+
+const VERTICES: &[Vertex] = &[
+    Vertex {
+        position: [0.0, 0.5, 0.0],
+        color: [1.0, 0.0, 0.0],
+    },
+    Vertex {
+        position: [-0.5, -0.5, 0.0],
+        color: [0.0, 1.0, 0.0],
+    },
+    Vertex {
+        position: [0.5, -0.5, 0.0],
+        color: [0.0, 0.0, 1.0],
+    },
+];
 
 struct State {
     surface: wgpu::Surface,
@@ -14,8 +58,8 @@ struct State {
     size: winit::dpi::PhysicalSize<u32>,
     clear_color: wgpu::Color,
     render_pipeline: wgpu::RenderPipeline,
-    alt_render_pipeline: wgpu::RenderPipeline,
-    use_alt_render_pipeline: bool,
+    vertex_buffer: wgpu::Buffer,
+    num_vertices: u32,
 }
 
 impl State {
@@ -58,10 +102,6 @@ impl State {
 
         let vs_module = device.create_shader_module(wgpu::include_spirv!("shader.vert.spv"));
         let fs_module = device.create_shader_module(wgpu::include_spirv!("shader.frag.spv"));
-        let alt_vs_module =
-            device.create_shader_module(wgpu::include_spirv!("alt_shader.vert.spv"));
-        let alt_fs_module =
-            device.create_shader_module(wgpu::include_spirv!("alt_shader.frag.spv"));
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -69,7 +109,7 @@ impl State {
                 bind_group_layouts: &[],
                 push_constant_ranges: &[],
             });
-        let mut rp_desc = wgpu::RenderPipelineDescriptor {
+        let rp_desc = wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex_stage: wgpu::ProgrammableStageDescriptor {
@@ -98,22 +138,20 @@ impl State {
             depth_stencil_state: None,
             vertex_state: wgpu::VertexStateDescriptor {
                 index_format: wgpu::IndexFormat::Uint16,
-                vertex_buffers: &[],
+                vertex_buffers: &[Vertex::desc()],
             },
             sample_count: 1,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
         };
         let render_pipeline = device.create_render_pipeline(&rp_desc);
-        rp_desc.vertex_stage = wgpu::ProgrammableStageDescriptor {
-            module: &alt_vs_module,
-            entry_point: "main",
-        };
-        rp_desc.fragment_stage = Some(wgpu::ProgrammableStageDescriptor {
-            module: &alt_fs_module,
-            entry_point: "main",
+
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(VERTICES),
+            usage: wgpu::BufferUsage::VERTEX,
         });
-        let alt_render_pipeline = device.create_render_pipeline(&rp_desc);
+        let num_vertices = VERTICES.len() as u32;
 
         Self {
             surface,
@@ -124,8 +162,8 @@ impl State {
             size,
             clear_color,
             render_pipeline,
-            alt_render_pipeline,
-            use_alt_render_pipeline: false,
+            vertex_buffer,
+            num_vertices,
         }
     }
 
@@ -151,14 +189,6 @@ impl State {
                 true
             }
             WindowEvent::KeyboardInput { input, .. } => match input {
-                KeyboardInput {
-                    state: ElementState::Pressed,
-                    virtual_keycode: Some(VirtualKeyCode::Space),
-                    ..
-                } => {
-                    self.use_alt_render_pipeline = !self.use_alt_render_pipeline;
-                    true
-                }
                 _ => false,
             },
             _ => false,
@@ -188,12 +218,9 @@ impl State {
                 }],
                 depth_stencil_attachment: None,
             });
-            if self.use_alt_render_pipeline {
-                render_pass.set_pipeline(&self.alt_render_pipeline);
-            } else {
-                render_pass.set_pipeline(&self.render_pipeline);
-            }
-            render_pass.draw(0..3, 0..1);
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.draw(0..self.num_vertices, 0..1);
         }
         self.queue.submit(std::iter::once(encoder.finish()));
 
