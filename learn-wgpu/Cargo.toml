@@ -3,12 +3,23 @@ name = "learn-wgpu"
 version = "0.1.0"
 authors = ["Niklas Korz <niklas@niklaskorz.de>"]
 edition = "2018"
-
+description = "WebGPU learning"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package.metadata.bundle]
+name = "learn-wgpu"
+identifier = "de.niklaskorz.learn-wgpu"
+#icon = ["32x32.png", "128x128.png", "128x128@2x.png"]
+version = "1.0.0"
+#resources = ["assets", "images/**/*.png", "secrets/public_key.txt"]
+copyright = "Copyright (c) Niklas Korz 2020. All rights reserved."
+category = "Developer Tool"
+short_description = "An example application."
+long_description = "An example application."
 
 [dependencies]
 image = "0.23"
-winit = "0.22"
+winit = "0.24"
 cgmath = "0.17"
 env_logger = "0.7"
 log = "0.4"
@@ -22,3 +33,4 @@ anyhow = "1.0"
 fs_extra = "1.1"
 glob = "0.3"
 shaderc = "0.6"
+
