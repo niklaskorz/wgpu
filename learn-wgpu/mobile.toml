@@ -1,0 +1,8 @@
+[app]
+name = "learn-wgpu"
+stylized-name = "Learn WGPU"
+domain = "niklaskorz.de"
+template-pack = "wgpu"
+
+[apple]
+development-team = "UKF976ENJ6"

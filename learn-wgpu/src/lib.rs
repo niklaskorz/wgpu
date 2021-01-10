@@ -3,6 +3,7 @@ mod texture;
 
 use futures::executor::block_on;
 use log::info;
+use mobile_entry_point::mobile_entry_point;
 use wgpu::util::DeviceExt;
 use winit::{
     event::*,
@@ -409,6 +410,7 @@ impl State {
     target_os = "android",
     ndk_glue::main(logger(level = "info", tag = "learn-wgpu"))
 )]
+#[mobile_entry_point]
 pub fn entry() {
     info!("App started");
 
