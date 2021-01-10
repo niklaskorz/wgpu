@@ -1,10 +1,13 @@
 [package]
-name = "learn-wgpu"
+name = "learn_wgpu"
 version = "0.1.0"
 authors = ["Niklas Korz <niklas@niklaskorz.de>"]
 edition = "2018"
 description = "WebGPU learning"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["lib", "cdylib"]
 
 [package.metadata.bundle]
 name = "learn-wgpu"
@@ -33,9 +36,30 @@ package = "wgpu"
 git = "https://github.com/gfx-rs/wgpu-rs"
 rev = "ab8b0e3766558d541206da2790dfd63f15b13bc4"
 
+[target.'cfg(target_os = "android")'.dependencies]
+ndk-sys = "0.2.1"
+ndk-glue = { version = "0.2.1", features = [ "logger" ] }
+android_logger = "0.9.2"
+
 [build-dependencies]
 anyhow = "1.0"
 fs_extra = "1.1"
 glob = "0.3"
 shaderc = "0.6"
 
+[package.metadata.android]
+apk_label = "learn-wgpu"
+target_sdk_version = 29
+min_sdk_version = 26
+fullscreen = false
+launch_mode = "singleTask"
+build_targets = ["aarch64-linux-android"]
+#build_targets = [ "armv7-linux-androideabi", "aarch64-linux-android", "i686-linux-android", "x86_64-linux-android" ]
+
+[[package.metadata.android.feature]]
+name = "android.hardware.vulkan.level"
+version = "1"
+
+[[package.metadata.android.feature]]
+name = "android.hardware.vulkan.version"
+version = "4198400" # v1.1 = 0x00401000
