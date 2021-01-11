@@ -133,9 +133,11 @@ impl State {
             )
             .await
             .unwrap();
+        let sc_format = adapter.get_swap_chain_preferred_format(&surface);
+        println!("Format: {:?}", sc_format);
         let sc_desc = wgpu::SwapChainDescriptor {
             usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-            format: wgpu::TextureFormat::Bgra8UnormSrgb,
+            format: sc_format,
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,

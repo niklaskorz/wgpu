@@ -33,8 +33,8 @@ anyhow = "1.0"
 
 [dependencies.wgpu]
 package = "wgpu"
-git = "https://github.com/gfx-rs/wgpu-rs"
-rev = "ab8b0e3766558d541206da2790dfd63f15b13bc4"
+git = "https://github.com/niklaskorz/wgpu-rs"
+rev = "b0774c0aa56fbdfe741dd6c0e86d55b8c6b42de3"
 
 [target.'cfg(target_os = "android")'.dependencies]
 ndk-sys = "0.2.1"
