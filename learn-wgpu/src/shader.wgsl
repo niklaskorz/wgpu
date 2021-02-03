@@ -1,7 +1,7 @@
 [[block]]
 struct Uniforms {
-    [[offset(0)]] view_proj: mat4x4<f32>;
-    [[offset(64)]] model_view: mat4x4<f32>;
+    view_proj: mat4x4<f32>;
+    model_view: mat4x4<f32>;
 };
 [[group(1), binding(0)]]
 var u: Uniforms;
@@ -19,7 +19,6 @@ var<out> out_pos: vec4<f32>;
 fn vs_main() {
     out_tex_coords = in_tex_coords;
     out_pos = u.view_proj * u.model_view * vec4<f32>(in_pos.x, in_pos.y, in_pos.z, 1.0);
-    #out_pos = vec4<f32>(in_pos.x, in_pos.y, in_pos.z, 1.0);
 }
 
 [[group(0), binding(0)]]
